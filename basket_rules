@@ -1,0 +1,49 @@
+from collections import defaultdict
+from itertools import combinations 
+import requests
+
+
+response = response.get('https://cse6040.gatech.edu/datasets/groceries.csv')
+
+groceries_file = response.text #imports grocery dataset from GT website
+
+groceries_list = [x.split(',') for x in groceries_file.split('\n')] #organizes the receipts into a list of lists
+
+groceries_itemset = [set(w) for w in groceries_list] #converts receipts into itemsets
+
+
+def update_pair_counts (pair_counts, itemset): #creates T[a,b] and T[b,a] and counts each item combination
+    assert type (pair_counts) is defaultdict
+    for a, b in combinations(itemset, 2):
+        pair_counts[(a,b)] += 1
+        pair_counts[(b,a)] += 1
+    return pair_counts
+
+
+def update_item_counts(item_counts, itemset): #creates C[a] and counts each item
+    for a in (itemset):
+        item_counts[a] += 1
+    return item_counts    
+
+
+def filter_rules_by_conf (pair_counts, item_counts, threshold): 
+    rules = {} # (item_a, item_b) -> conf (item_a => item_b)
+    for (a,b) in pair_counts:
+        if item_counts[a] >= MIN_COUNT:
+            conf_ab = pair_counts[(a,b)] / item_counts[a]
+            if conf_ab >= threshold:
+                rules[a,b] = conf_ab 
+    return rules
+
+
+def find_assoc_rules(receipts, threshold): #combine above functions into accociation rule finder
+    pair_counts = defaultdict(int)
+    item_counts = defaultdict(int)
+    for itemset in receipts:
+        update_pair_counts (pair_counts, itemset)
+        update_item_counts(item_counts, itemset)
+        rules = filter_rules_by_conf (pair_counts, item_counts, threshold)
+    return rules
+
+
+basket_rules = find_assoc_rules(groceries_itemset, THRESHOLD)
